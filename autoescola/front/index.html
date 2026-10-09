@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Cadastro Autoescola</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <h1>Cadastro de Aluno e Instrutor</h1>
+
+    <form id="form">
+        <label>Tipo:</label>
+        <select id="tipo">
+            <option value="aluno">Aluno</option>
+            <option value="instrutor">Instrutor</option>
+        </select>
+
+        <label>Nome:</label>
+        <input id="nome" required>
+
+        <label>E-mail:</label>
+        <input id="email" type="email" required>
+
+        <label>Telefone:</label>
+        <input id="telefone" required>
+
+        <div id="dataBox">
+            <label>Nascimento:</label>
+            <input id="data" type="date" required>
+        </div>
+
+        <div id="cnhBox" hidden>
+            <label>Categoria CNH:</label>
+            <select id="cnh" disabled>
+                <option value="A">A</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+                <option value="D">D</option>
+                <option value="E">E</option>
+                <option value="AB">AB</option>
+            </select>
+        </div>
+
+        <button type="submit">Cadastrar</button>
+        <p id="mensagem"></p>
+    </form>
+
+    <hr>
+    <h2>Alunos Cadastrados</h2>
+    <ul id="alunos"></ul>
+
+    <h2>Instrutores Cadastrados</h2>
+    <ul id="instrutores"></ul>
+
+    <script>
+        const form = document.getElementById("form");
+        const tipo = document.getElementById("tipo");
+        const data = document.getElementById("data");
+        const cnh = document.getElementById("cnh");
+
+        tipo.onchange = () => {
+            const i = tipo.value === "instrutor";
+            document.getElementById("dataBox").hidden = i;
+            document.getElementById("cnhBox").hidden = !i;
+            data.required = !i;
+            data.disabled = i;
+            cnh.required = i;
+            cnh.disabled = !i;
+        };
+
+        form.onsubmit = async e => {
+            e.preventDefault();
+
+            const i = tipo.value === "instrutor";
+            const dados = {
+                nome: document.getElementById("nome").value,
+                email: document.getElementById("email").value,
+                telefone: document.getElementById("telefone").value
+            };
+
+            dados[i ? "categoria_cnh" : "data_nascimento"] =
+                i ? cnh.value : data.value;
+
+            try {
+                const resposta = await fetch(
+                    `http://localhost/autoescola/back/index.php?rota=${i ? "cadastrarinstrutor" : "cadastraraluno"}`,
+                    {
+                        method: "POST",
+                        headers: {"Content-Type": "application/json"},
+                        body: JSON.stringify(dados)
+                    }
+                );
+
+                const resultado = await resposta.json();
+
+                if (!resposta.ok) throw new Error(resultado.erro || "Erro no cadastro");
+
+                document.getElementById("mensagem").textContent = resultado.mensagem;
+                form.reset();
+                tipo.onchange();
+            } catch (erro) {
+                document.getElementById("mensagem").textContent =
+                    "Erro: " + erro.message;
+            }
+        };
+
+        async function carregar(rota, lista) {
+            const resposta = await fetch(
+                `http://localhost/autoescola/back/index.php?rota=${rota}`
+            );
+            const dados = await resposta.json();
+            lista.innerHTML = "";
+
+            dados.forEach(pessoa => {
+                const li = document.createElement("li");
+                li.textContent = `${pessoa.nome} - ${pessoa.email}`;
+                lista.appendChild(li);
+            });
+        }
+
+        tipo.onchange();
+
+        carregar("alunos", document.getElementById("alunos"));
+        carregar("instrutores", document.getElementById("instrutores"));
+    </script>
+
+</body>
+</html>
+```
